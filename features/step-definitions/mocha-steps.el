@@ -1,6 +1,6 @@
 (require 'ert)
 (require 'f)
-(require 'js2-mode)
+(require 'tree-sitter-langs)
 
 (When "^I visit sample project file \"\\([^\"]+\\)\"$"
       (lambda (file)
@@ -35,8 +35,7 @@
       (lambda (callback)
         (add-hook 'compilation-finish-functions callback)))
 
-(When "^I switch to js2-mode$"
-  (lambda (callback)
-    (js2-mode-wait-for-parse callback)
-    (When "I run the command \"js2-mode\"")
-    (js2-reparse t)))
+
+(When "^I enable tree-sitter-mode$"
+      (lambda ()
+        (When "I run the command \"tree-sitter-mode\"")))

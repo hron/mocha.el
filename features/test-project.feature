@@ -73,7 +73,7 @@ Feature: Test Mocha Project
     Given I visit sample project file "sample-project/test/parse-int-test.js"
     When I switch to buffer "parse-int-test.js"
     Then I should be in buffer "parse-int-test.js"
-    When I switch to js2-mode
+    When I enable tree-sitter-mode
     And I go to line "5"
     And I run the command "mocha-test-at-point"
     And I wait for the compilation to finish
@@ -127,7 +127,7 @@ Feature: Test Mocha Project
       Mocha exited abnormally
       """
 
-  Scenario: Testing a particular line in a test file without js2-mode
+  Scenario: Testing a particular line in a test file without tree-sitter-mode
     Given I visit sample project file "sample-project/test/parse-int-test.js"
     When I switch to buffer "parse-int-test.js"
     Then I should be in buffer "parse-int-test.js"
