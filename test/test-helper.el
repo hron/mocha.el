@@ -1,5 +1,6 @@
 (require 'f)
 (require 's)
+(require 'tree-sitter-langs)
 
 (defvar mocha-test/test-path (f-parent (f-this-file)))
 (defvar mocha-test/root-path (f-parent mocha-test/test-path))

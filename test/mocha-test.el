@@ -85,31 +85,19 @@
 
 ;;;; mocha-find-current-test
 
-(ert-deftest mocha-test/mocha-find-current-test/js2-mode ()
+(ert-deftest mocha-test/mocha-find-current-test/js+tree-sitter ()
   (with-temp-buffer
-    (insert "it('does as expected', function() {")
-    (save-excursion (insert "})"))
-    (js2-mode)
-    (js2-reparse)
-    (should (string= (mocha-find-current-test) "does as expected"))))
+    (insert "it('another test', function() {});"
+            "describe('someFunction()', () => {"
+            "  it('does as expected', async () => {"
+            "  });"
+            "});")
+    (search-backward "does as expected")
+    (js-mode)
+    (tree-sitter-mode)
+    (should (string= (mocha-find-current-test) "someFunction() does as expected"))))
 
-(ert-deftest mocha-test/mocha-find-current-test/js2-jsx-mode ()
-  (with-temp-buffer
-    (insert "it('does as expected', function() {")
-    (save-excursion (insert "})"))
-    (js2-jsx-mode)
-    (js2-reparse)
-    (should (string= (mocha-find-current-test) "does as expected"))))
-
-(ert-deftest mocha-test/mocha-find-current-test/point-in-comment ()
-  (with-temp-buffer
-    (insert "it('does as expected', function() { // Imporant ")
-    (save-excursion (insert "test\n});"))
-    (js2-mode)
-    (js2-parse)
-    (should (string= (mocha-find-current-test) "does as expected"))))
-
-(ert-deftest mocha-test/mocha-find-current-test/js-mode-error ()
+(ert-deftest mocha-test/mocha-find-current-test/js+NO-tree-sitter ()
   (with-temp-buffer
     (insert "it('does as expected', function() {")
     (save-excursion (insert "})"))
@@ -120,8 +108,8 @@
   (with-temp-buffer
     (insert "test('that it does as expected', 'test.json'")
     (save-excursion (insert ");"))
-    (js2-mode)
-    (js2-parse)
+    (js-mode)
+    (tree-sitter-mode)
     (make-local-variable 'mocha-test-definition-nodes)
     (push "test" mocha-test-definition-nodes)
     (should (string= (mocha-find-current-test) "that it does as expected"))))
@@ -183,8 +171,7 @@ describe('something', function() {
 
 describe(\"another top-level\", () => {});
 afterAll(() => {});")
-    (js2-mode)
-    (js2-parse)
+    (js-mode)
     (require 'mocha)
     (let (imenu-max-item-length)
       (should (equal
@@ -207,8 +194,7 @@ afterAll(() => {});")
 (ert-deftest mocha-test/toggle-imenu-function ()
   (with-temp-buffer
     (insert "function setUp() {}\ndescribe(\"top-level\", () => {it('works');});")
-    (js2-mode)
-    (js2-parse)
+    (js-mode)
     (let ((prev (imenu--make-index-alist)))
       (mocha-toggle-imenu-function)
       (should (equal (imenu--make-index-alist)
@@ -222,8 +208,7 @@ afterAll(() => {});")
 (ert-deftest mocha-test/imenu-custom-test-definition-nodes ()
   (with-temp-buffer
     (insert "function setUp() {}\ndescribe(\"top-level\", () => {test('that it works', 'test.json');});")
-    (js2-mode)
-    (js2-parse)
+    (js-mode)
     (make-local-variable 'mocha-test-definition-nodes)
     (make-local-variable 'mocha-imenu-functions)
     (push "test" mocha-test-definition-nodes)

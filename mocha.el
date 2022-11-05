@@ -5,8 +5,8 @@
 ;; URL: http://github.com/scottaj/mocha.el
 ;; Created: 2016
 ;; Version: 1.1
-;; Keywords: javascript mocha jasmine
-;; Package-Requires: ((js2-mode "20150909") (f "0.18"))
+;; Keywords: javascript typescript mocha jasmine
+;; Package-Requires: ((emacs "26.1") (f "0.18") (tree-sitter "20220212") (tree-sitter-langs "20220925"))
 
 ;; This file is NOT part of GNU Emacs.
 ;;
@@ -16,7 +16,7 @@
 
 ;;; Code:
 (require 'compile)
-(require 'js2-mode)
+(require 'tree-sitter)
 (require 'f)
 
 (defgroup mocha nil
@@ -242,42 +242,61 @@ IF TEST is specified run mocha with a grep for just that test."
         (compilation-buffer-name-function (lambda (_) "" "*mocha tests*")))
     (compile test-command-to-run 'mocha-compilation-mode)))
 
-(defun mocha-walk-up-to-it (node)
-  "Recursively walk up the ast from the js2-node NODE.
 
-Stops when we find a call node named 'describe' or 'it' or reach the root.
+(defun mocha--tsc-extract-capture (tsc-match name)
+  "Finds catpure from TSC-MATCH by NAME
 
-If we find the name node we are looking for, return the first argument of the
- call node.
+TSC-MATCH is a match produced by `tsc-query-matches'"
+  (cdr (seq-find (lambda (m) (eq name (car m))) tsc-match)))
 
-If we reach the root without finding what we are looking for return nil."
-  (if (and (js2-node-p node) (not (js2-ast-root-p node)))
-      (if (and
-           ;; If the node is an expression or statement
-           (js2-expr-stmt-node-p node)
-           ;; And the expression is a function calL
-           (js2-call-node-p (js2-expr-stmt-node-expr node))
-           ;; And the call target is a name node
-           (js2-name-node-p (js2-call-node-target (js2-expr-stmt-node-expr node)))
-           ;; And the name of the name node is what we are looking for
-           (member (js2-name-node-name (js2-call-node-target (js2-expr-stmt-node-expr node)))
-                   mocha-test-definition-nodes))
-          ;; Get the first argument, check it is a string and return its value
-          (let ((first-arg (car (js2-call-node-args (js2-expr-stmt-node-expr node)))))
-            (if (js2-string-node-p first-arg)
-                (js2-string-node-value first-arg)
-              nil))
-        (mocha-walk-up-to-it (js2-node-parent-stmt node)))
-    nil))
+(defun mocha-test-definition-tsc-query ()
+  "Returns tree sitter query to find test nodes in current buffer
+
+Resulting query looks like this:
+
+(call_expression
+    function: (identifier) @func_name
+    arguments: (arguments \. (string) @test_name (expression) @test_body)
+    (.match? @func_name \"describe|it|test\"))
+
+"
+  (let ((query (vector
+                (append '(call_expression
+                          function: (identifier) @func_name
+                          arguments: (arguments \. (string) @test_name (expression) @test_body))
+                        (list (append '(.match? @func_name) (list (string-join mocha-test-definition-nodes "|"))))))))
+    (tsc-make-query tree-sitter-language query)))
+
+(defun mocha-find-test-definition-nodes ()
+  "Returns all mocha test nodes"
+  (tsc-query-matches (mocha-test-definition-tsc-query)
+                     (tsc-root-node tree-sitter-tree)
+                     #'tsc--buffer-substring-no-properties))
 
 (defun mocha-find-current-test ()
-  "Try to find the innermost 'describe' or 'it' using js2-mode.
+  "Try to find the innermost 'describe' or 'it'.
 
 When a 'describe' or 'it' is found, return the first argument of that call.
-If js2-mode is not enabled in the buffer, returns nil.
+If neither tree-sitter-minor-mode is not enabled in the buffer, returns nil.
 If there is no wrapping 'describe' or 'it' found, return nil."
-  (let ((node (js2-node-at-point nil t)))
-    (mocha-walk-up-to-it node)))
+  (let ((test-path
+         (seq-reduce
+          (lambda (acc x)
+            (let* ((match (cdr x))
+                   (func-name-capture (mocha--tsc-extract-capture match 'func_name))
+                   (test-name-capture (mocha--tsc-extract-capture match 'test_name))
+                   (test-body-capture (mocha--tsc-extract-capture match 'test_body))
+                   (test-defintion-start (tsc-node-start-position func-name-capture))
+                   (test-defintion-end (tsc-node-end-position test-body-capture))
+                   (test-name (let ((raw-name (tsc-node-text test-name-capture)))
+                                (substring raw-name 1 (1- (length raw-name))))))
+              (and (>= (point) test-defintion-start)
+                   (<= (point) test-defintion-end)
+                   (push test-name acc))
+              acc))
+          (mocha-find-test-definition-nodes)
+          '())))
+    (string-join (reverse test-path) " ")))
 
 ;;;###autoload
 (defun mocha-test-project ()
