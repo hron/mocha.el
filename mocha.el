@@ -47,7 +47,7 @@
   :group 'mocha
   :safe #'stringp)
 
-(defcustom mocha-reporter "dot"
+(defcustom mocha-reporter "spec"
   "Name of reporter to use."
   :type 'string
   :group 'mocha

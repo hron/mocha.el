@@ -39,9 +39,9 @@
 
 (ert-deftest mocha-test/mocha-generate-command/return-command-with-correct-reporter ()
   (mocha-test/with-sandbox
-   (should (s-contains? "--reporter dot" (mocha-generate-command nil)))
-   (let ((mocha-reporter "spec"))
-     (should (s-contains? "--reporter spec" (mocha-generate-command nil))))))
+   (should (s-contains? "--reporter spec" (mocha-generate-command nil)))
+   (let ((mocha-reporter "dot"))
+     (should (s-contains? "--reporter dot" (mocha-generate-command nil))))))
 
 
 ;;;; mocha-find-project-root
@@ -131,7 +131,7 @@
                            ;; determines whether async compilation can
                            ;; run. In 25.x, it's (fboundp 'make-process)
                            (start-process) (make-process))
-        (mocha-run))
+                          (mocha-run))
       (with-current-buffer "*mocha tests*"
         (goto-char 0)
         (should (search-forward (concat "\n" command "\n") nil t))
