@@ -56,7 +56,7 @@
 (defcustom mocha-debugger 'realgud
   "Which debugger to use."
   :type '(choice (const :tag "realgud" realgud)
-                 (const :tag "indium" indium))
+          (const :tag "indium" indium))
   :group 'mocha
   :safe #'mocha-debugger-name-p)
 
@@ -241,7 +241,6 @@ IF TEST is specified run mocha with a grep for just that test."
         (default-directory (mocha-find-project-root))
         (compilation-buffer-name-function (lambda (_) "" "*mocha tests*")))
     (compile test-command-to-run 'mocha-compilation-mode)))
-
 
 (defun mocha--tsc-extract-capture (tsc-match name)
   "Finds catpure from TSC-MATCH by NAME
